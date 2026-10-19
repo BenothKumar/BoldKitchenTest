@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restaurant Table Manager | 20 Tables</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; }
+    body { background: #f4f7fc; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem 1rem; }
+    .restaurant-card { max-width: 1000px; width: 100%; background: white; border-radius: 2.5rem; box-shadow: 0 20px 35px -8px rgba(0,0,0,0.15); padding: 2rem 1.5rem 2.5rem; }
+    h1 { text-align: center; font-weight: 600; font-size: 2rem; color: #1e293b; margin-bottom: 0.25rem; }
+    .subhead { text-align: center; color: #64748b; font-size: 1rem; margin-bottom: 2rem; border-bottom: 1px solid #e9eef3; padding-bottom: 1rem; }
+    .legend { display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 500; color: #334155; background: #f1f5f9; padding: 0.4rem 1.1rem; border-radius: 40px; }
+    .legend-dot { width: 18px; height: 18px; border-radius: 50%; }
+    .legend-dot.green { background: #22c55e; }
+    .legend-dot.red { background: #ef4444; }
+    .tables-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 1rem; margin: 1.5rem 0 0.5rem; }
+    .table-btn { aspect-ratio: 1/1; border: none; border-radius: 1.8rem; background: #22c55e; color: white; font-size: 2rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s ease, transform 0.15s ease; box-shadow: 0 8px 16px -6px rgba(34,197,94,0.35); padding: 0.5rem; line-height: 1.2; border: 2px solid rgba(255,255,255,0.2); }
+    .table-btn:hover { transform: scale(1.02); }
+    .table-btn:active { transform: scale(0.97); }
+    .table-btn.occupied { background: #ef4444; box-shadow: 0 8px 16px -6px rgba(239,68,68,0.45); }
+    .table-number { font-size: 2.2rem; font-weight: 700; line-height: 1; }
+    .table-status { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9; font-weight: 500; margin-top: 0.25rem; background: rgba(255,255,255,0.2); padding: 0.15rem 0.6rem; border-radius: 30px; }
+    .footer-note { text-align: center; margin-top: 2.2rem; font-size: 0.8rem; color: #94a3b8; border-top: 1px solid #e9eef3; padding-top: 1.2rem; }
+    .footer-note i { font-style: normal; background: #eef2f6; padding: 0.15rem 0.6rem; border-radius: 30px; }
+    .conn-status { text-align: center; font-size: 0.8rem; margin-bottom: 0.5rem; color: #64748b; }
+    .conn-status.online { color: #16a34a; }
+    .conn-status.offline { color: #dc2626; }
+    @media (max-width: 480px) {
+      .restaurant-card { padding: 1.5rem 0.8rem 2rem; border-radius: 1.8rem; }
+      h1 { font-size: 1.6rem; }
+      .tables-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.8rem; }
+      .table-btn { border-radius: 1.4rem; }
+      .table-number { font-size: 1.7rem; }
+      .table-status { font-size: 0.6rem; padding: 0.1rem 0.45rem; }
+    }
+    @media (max-width: 360px) { .tables-grid { grid-template-columns: repeat(2, 1fr); } }
+  </style>
+</head>
+<body>
+  <div class="restaurant-card">
+    <h1>🍽️ Table Manager</h1>
+    <div class="subhead">Click a table to toggle: <strong style="color:#22c55e;">green</strong> = available, <strong style="color:#ef4444;">red</strong> = occupied</div>
+    <div class="conn-status" id="connStatus">🔄 Connecting…</div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="legend-dot green"></span> Available</div>
+      <div class="legend-item"><span class="legend-dot red"></span> Occupied</div>
+    </div>
+
+    <div class="tables-grid" id="tablesGrid"></div>
+
+    <div class="footer-note"><i>Changes sync instantly across all devices</i></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       🔥 FIREBASE SCRIPT — REPLACE ONLY THE firebaseConfig BLOCK BELOW
+       ═══════════════════════════════════════════════════════════════ -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+
+    // ⬇️⬇️⬇️  PASTE YOUR FIREBASE CONFIG HERE  ⬇️⬇️⬇️
+   const firebaseConfig = {
+  apiKey: "AIzaSyCH8WkBqAO7Den--_cz6e77ky_FImjpIz8",
+  authDomain: "bold-kitchen.firebaseapp.com",
+databaseURL: "https://bold-kitchen-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "bold-kitchen",
+  storageBucket: "bold-kitchen.firebasestorage.app",
+  messagingSenderId: "731926644586",
+  appId: "1:731926644586:web:20aebfc5d12d4647770713",
+  measurementId: "G-KBFR4QW4BD"
+};
+    // ⬆️⬆️⬆️  PASTE YOUR FIREBASE CONFIG HERE  ⬆️⬆️⬆️
+
+    // 1. Build the 20 table buttons dynamically
+    const grid = document.getElementById('tablesGrid');
+    for (let i = 1; i <= 20; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'table-btn';
+      btn.dataset.table = i;
+      btn.setAttribute('aria-label', `Table ${i}, available`);
+      btn.innerHTML = `<span class="table-number">${i}</span><span class="table-status">free</span>`;
+      grid.appendChild(btn);
+    }
+
+    // 2. Connect to Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const tablesRef = ref(db, 'tables');
+    const connEl = document.getElementById('connStatus');
+
+    // 3. Live render — fires on every change from any device
+    onValue(tablesRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      document.querySelectorAll('.table-btn').forEach(btn => {
+        const id = btn.dataset.table;
+        const occupied = data[id] === 'occupied';
+        btn.classList.toggle('occupied', occupied);
+        btn.querySelector('.table-status').textContent = occupied ? 'busy' : 'free';
+        btn.setAttribute('aria-label', `Table ${id}, ${occupied ? 'occupied' : 'available'}`);
+      });
+      connEl.textContent = '🟢 Live — synced with all devices';
+      connEl.classList.add('online');
+    }, (err) => {
+      connEl.textContent = '🔴 Connection error — check your config';
+      connEl.classList.add('offline');
+      console.error(err);
+    });
+
+    // 4. Click handler — writes to database (which re-renders everything)
+    document.querySelectorAll('.table-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.table;
+        const nowOccupied = btn.classList.contains('occupied') ? 'free' : 'occupied';
+        set(ref(db, `tables/${id}`), nowOccupied);
+      });
+    });
+  </script>
+</body>
+</html>
